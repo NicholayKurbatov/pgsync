@@ -1,9 +1,4 @@
-"""PGSync settings
-
-This module contains the settings for PGSync.
-It reads environment variables from a .env file and sets default values for each variable.
-The variables are used to configure various parameters such as block size, checkpoint path, polling interval, etc.
-"""
+"""PGSync settings."""
 import logging
 import logging.config
 import os
@@ -135,9 +130,6 @@ ELASTICSEARCH_IGNORE_STATUS = tuple(map(int, ELASTICSEARCH_IGNORE_STATUS))
 ELASTICSEARCH = env.bool("ELASTICSEARCH", default=True)
 OPENSEARCH = env.bool("OPENSEARCH", default=(not ELASTICSEARCH))
 OPENSEARCH_AWS_HOSTED = env.bool("OPENSEARCH_AWS_HOSTED", default=False)
-OPENSEARCH_AWS_SERVERLESS = env.bool(
-    "OPENSEARCH_AWS_SERVERLESS", default=False
-)  # noqa E501
 
 # Postgres:
 PG_HOST = env.str("PG_HOST", default="localhost")
@@ -161,6 +153,9 @@ REDIS_SCHEME = env.str("REDIS_SCHEME", default="redis")
 REDIS_SOCKET_TIMEOUT = env.int("REDIS_SOCKET_TIMEOUT", default=5)
 # number of items to write to Redis at a time
 REDIS_WRITE_CHUNK_SIZE = env.int("REDIS_WRITE_CHUNK_SIZE", default=1000)
+# ssl connection for redis
+REDIS_SSL = env.bool("REDIS_SSL", default=True)
+REDIS_SSL_CA_CERTS = env.str("REDIS_SSL_CA_CERTS", default=None)
 
 
 # Logging:

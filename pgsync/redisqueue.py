@@ -3,10 +3,10 @@ import json
 import logging
 from typing import List, Optional
 
-from redis import Redis
+from redis import StrictRedis
 from redis.exceptions import ConnectionError
 
-from .settings import REDIS_READ_CHUNK_SIZE, REDIS_SOCKET_TIMEOUT
+from .settings import REDIS_READ_CHUNK_SIZE, REDIS_SOCKET_TIMEOUT, REDIS_SSL, REDIS_SSL_CA_CERTS, REDIS_AUTH, REDIS_HOST, REDIS_PORT
 from .urls import get_redis_url
 
 logger = logging.getLogger(__name__)
@@ -20,10 +20,20 @@ class RedisQueue(object):
         url: str = get_redis_url(**kwargs)
         self.key: str = f"{namespace}:{name}"
         try:
-            self.__db: Redis = Redis.from_url(
-                url,
-                socket_timeout=REDIS_SOCKET_TIMEOUT,
-            )
+            if REDIS_SSL:
+                self.__db: StrictRedis = StrictRedis(
+                    host=REDIS_HOST,
+                    port=REDIS_PORT,
+                    password=REDIS_AUTH,
+                    socket_timeout=REDIS_SOCKET_TIMEOUT,
+                    ssl=REDIS_SSL,
+                    ssl_ca_certs=REDIS_SSL_CA_CERTS
+                )
+            else:
+                self.__db: StrictRedis = StrictRedis.from_url(
+                    url,
+                    socket_timeout=REDIS_SOCKET_TIMEOUT
+                )
             self.__db.ping()
         except ConnectionError as e:
             logger.exception(f"Redis server is not running: {e}")
@@ -34,7 +44,7 @@ class RedisQueue(object):
         """Return the approximate size of the queue."""
         return self.__db.llen(self.key)
 
-    def pop(self, chunk_size: Optional[int] = None) -> List[dict]:
+    def bulk_pop(self, chunk_size: Optional[int] = None) -> List[dict]:
         """Remove and return multiple items from the queue."""
         chunk_size = chunk_size or REDIS_READ_CHUNK_SIZE
         if self.qsize > 0:
@@ -42,10 +52,10 @@ class RedisQueue(object):
             pipeline.lrange(self.key, 0, chunk_size - 1)
             pipeline.ltrim(self.key, chunk_size, -1)
             items: List = pipeline.execute()
-            logger.debug(f"pop size: {len(items[0])}")
+            logger.debug(f"bulk_pop size: {len(items[0])}")
             return list(map(lambda value: json.loads(value), items[0]))
 
-    def push(self, items: List) -> None:
+    def bulk_push(self, items: List) -> None:
         """Push multiple items onto the queue."""
         self.__db.rpush(self.key, *map(json.dumps, items))
 
